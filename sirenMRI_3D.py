@@ -71,7 +71,10 @@ func_rep = Siren(
     final_activation=torch.nn.Identity(),
     w0_initial=args.w0_initial,
     w0=args.w0
-).to(device)
+)
+if torch.cuda.device_count() > 1:
+    func_rep = torch.nn.DataParallel(func_rep)
+func_rep.to(device)
 
 # Set up training
 trainer = Trainer(func_rep, lr=args.learning_rate)
@@ -116,12 +119,7 @@ func_rep.load_state_dict(trainer.best_model)
 with torch.no_grad():
     PredParams = func_rep(coordinates)
 
-# Save the prediction in MATLAB file
 PredParams = scaler.inverse_transform(PredParams.cpu().numpy())
-outdata = {}
-outdata['PredictionParams'] = PredParams
-scipy.io.savemat('DNNPredict_COIN.mat',outdata)
-
 img_decompressed = np.reshape(PredParams, (img_tmp.shape[0], img_tmp.shape[1], img_tmp.shape[2], img_tmp.shape[3]))
 
 # Save the prediction in NIFTI
