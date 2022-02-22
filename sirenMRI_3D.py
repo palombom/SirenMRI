@@ -15,10 +15,12 @@ from torchvision import transforms
 from torchvision.utils import save_image
 from training import Trainer
 from sklearn.preprocessing import MinMaxScaler
+import pickle
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-ld", "--logdir", help="Path to save logs", default=f"/tmp/{getpass.getuser()}")
+parser.add_argument("-lm", "--log_measures", help="Save measures for each epoch", action='store_true')
 parser.add_argument("-ni", "--num_iters", help="Number of iterations to train for", type=int, default=50000)
 parser.add_argument("-lr", "--learning_rate", help="Learning rate", type=float, default=2e-4)
 parser.add_argument("-se", "--seed", help="Random seed", type=int, default=random.randint(1, int(1e6)))
@@ -99,6 +101,9 @@ print(f'Full precision bpp: {fp_bpp:.2f}')
 # Train model in full precision
 trainer.train(coordinates, features, num_iters=args.num_iters)
 print(f'Best training psnr: {trainer.best_vals["psnr"]:.2f}')
+if args.log_measures:
+    with open(args.logdir + '/log.pickle', 'wb') as handle:
+        pickle.dump(trainer.logs, handle)
 
 # Log full precision results
 results['fp_bpp'].append(fp_bpp)

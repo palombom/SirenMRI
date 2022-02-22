@@ -16,11 +16,13 @@ from torchvision import transforms
 from torchvision.utils import save_image
 from training import Trainer
 from sklearn.preprocessing import MinMaxScaler
+import pickle
 import py7zr
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-ld", "--logdir", help="Path to save output", default=f"/tmp/{getpass.getuser()}")
+parser.add_argument("-lm", "--log_measures", help="Save measures for each epoch", action='store_true')
 parser.add_argument("-ni", "--num_iters", help="Number of iterations to train for", type=int, default=50000)
 parser.add_argument("-lr", "--learning_rate", help="Learning rate", type=float, default=2e-4)
 parser.add_argument("-se", "--seed", help="Random seed", type=int, default=random.randint(1, int(1e6)))
@@ -49,6 +51,8 @@ results = {'fp_bpp': [], 'hp_bpp': [], 'fp_psnr': [], 'hp_psnr': []}
 # Create directory to store the training info
 if not os.path.exists(args.logdir):
     os.makedirs(args.logdir)
+if args.log_measures and not os.path.exists(args.logdir + '/logs'):
+    os.makedirs(args.logdir + '/logs')
 # Create directory to store the training info
 compression_folder = args.logdir + "/SirenCompression"
 if not os.path.exists(compression_folder):
@@ -113,9 +117,12 @@ for i in range(sz):
     trainer.train(coordinates, features, num_iters=args.num_iters)
     print(f'Best training psnr: {trainer.best_vals["psnr"]:.2f}')
     print(f'Best training loss: {trainer.best_vals["loss"]:.2f}')
+    if args.log_measures:
+        with open(args.logdir + '/logs/log_slice_' + str(i) + '.pickle', 'wb') as handle:
+            pickle.dump(trainer.logs, handle)
 
     # Save best model
-    torch.save(trainer.best_model, compression_folder + f'/best_model_Slice_{slice_to_process}.pt')
+    torch.save(trainer.best_model, compression_folder + f'/best_model_slice_{slice_to_process}.pt')
 
     # Update current model to be best model
     func_rep.load_state_dict(trainer.best_model)
