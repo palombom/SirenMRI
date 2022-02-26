@@ -63,7 +63,6 @@ class Trainer():
                         #self.scheduler.step(loss.item())
                         # If model achieves best PSNR and loss seen during training, update
                         # model
-                        if i > int(num_iters / 2.):
-                            for k, v in self.representation.state_dict().items():
-                                self.best_model[k].copy_(v)
+                        for k, v in self.representation.state_dict().items():
+                            self.best_model[k].copy_(v)
 
