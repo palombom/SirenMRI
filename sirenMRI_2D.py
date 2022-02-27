@@ -6,6 +6,7 @@ import imageio
 import json
 import os
 import random
+import sys
 import torch
 import util
 import numpy as np
@@ -32,8 +33,10 @@ parser.add_argument("-nl", "--num_layers", help="Number of layers", type=int, de
 parser.add_argument("-w0", "--w0", help="w0 parameter for SIREN model.", type=float, default=30.0)
 parser.add_argument("-w0i", "--w0_initial", help="w0 parameter for first layer of SIREN model.", type=float, default=30.0)
 parser.add_argument("-m", "--model", help="Model to use. Implemented are siren or mlp.", default="siren")
+parser.add_argument("-a", "--activation", help="Activation function to use with mlp (relu or tanh).", default="relu")
 
 args = parser.parse_args()
+mlp_activation = {'relu': torch.nn.ReLU(), 'tanh': torch.nn.Tanh()}
 
 # Set up torch and cuda
 deviceinuse = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -87,15 +90,28 @@ for i in range(sz):
     print(f'Compressing slice: {slice_to_process}')
 
     # Setup model
-    func_rep = Siren(
-        dim_in=2,
-        dim_hidden=args.layer_size,
-        dim_out=vols,
-        num_layers=args.num_layers,
-        final_activation=torch.nn.Identity(),
-          w0_initial=args.w0_initial,
-        w0=args.w0
-    ).to(device)
+    if args.model == 'siren':
+        func_rep = Siren(
+            dim_in=2,
+            dim_hidden=args.layer_size,
+            dim_out=vols,
+            num_layers=args.num_layers,
+            final_activation=torch.nn.Identity(),
+            w0_initial=args.w0_initial,
+            w0=args.w0
+        ).to(device)
+    elif args.model == 'mlp':
+        func_rep = MLP(
+            dim_in=2,
+            dim_hidden=args.layer_size,
+            dim_out=vols,
+            num_layers=args.num_layers,
+            activation=mlp_activation[args.activation]
+        ).to(device)
+    else:
+        print(f'Unknown model: {args.model}')
+        sys.exit(1)
+
 
     # Set up training
     trainer = Trainer(func_rep, lr=args.learning_rate)

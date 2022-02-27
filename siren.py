@@ -105,20 +105,17 @@ class MLP(nn.Module):
         dim_hidden (int): Dimension of hidden layers.
         dim_out (int): Dimension of output.
         num_layers (int): Number of layers.
-
-
-        use_bias (bool):
-        final_activation (torch.nn.Module): Activation function.
+        activation (torch.nn.Module): Activation function.
     """
-    def __init__(self, dim_in, dim_hidden, dim_out, num_layers):
+    def __init__(self, dim_in, dim_hidden, dim_out, num_layers, activation=nn.ReLU()):
         super(MLP, self).__init__()
 
         self.fc_layers = nn.ModuleList()
 
-        self.fc_layers.extend([nn.Linear(dim_in, dim_hidden), nn.ReLU()])
+        self.fc_layers.extend([nn.Linear(dim_in, dim_hidden), activation])
 
         for ind in range(num_layers):  # n_layers fully connected hidden layers with RELU transfer function
-            self.fc_layers.extend([nn.Linear(dim_hidden, dim_hidden), nn.ReLU()])
+            self.fc_layers.extend([nn.Linear(dim_hidden, dim_hidden), activation])
             self.encoder = nn.Sequential(*self.fc_layers, nn.Linear(dim_hidden, dim_out)) # Add the last linear layer for regression
 
     def forward(self, x):
