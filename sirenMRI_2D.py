@@ -33,10 +33,14 @@ parser.add_argument("-nl", "--num_layers", help="Number of layers", type=int, de
 parser.add_argument("-w0", "--w0", help="w0 parameter for SIREN model.", type=float, default=30.0)
 parser.add_argument("-w0i", "--w0_initial", help="w0 parameter for first layer of SIREN model.", type=float, default=30.0)
 parser.add_argument("-m", "--model", help="Model to use. Implemented are siren or mlp.", default="siren")
+parser.add_argument("-fa", "--final_activation", help="Final activation function (SIREN model-only).", default="identity")
 parser.add_argument("-a", "--activation", help="Activation function to use with mlp (relu or tanh).", default="relu")
+parser.add_argument("-ssr", "--single_siren_start", help="Substitute first layer with SIREN (MLP model-only).", action='store_true')
+parser.add_argument("-sse", "--single_siren_end", help="Substitute last layer with SIREN (MLP model-only).", action='store_true')
 
 args = parser.parse_args()
 mlp_activation = {'relu': torch.nn.ReLU(), 'tanh': torch.nn.Tanh()}
+final_activation = {'identity': torch.nn.Identity(), 'relu': torch.nn.ReLU(), 'tanh': torch.nn.Tanh()}
 
 # Set up torch and cuda
 deviceinuse = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -96,7 +100,7 @@ for i in range(sz):
             dim_hidden=args.layer_size,
             dim_out=vols,
             num_layers=args.num_layers,
-            final_activation=torch.nn.Identity(),
+            final_activation=final_activation[args.final_activation],
             w0_initial=args.w0_initial,
             w0=args.w0
         ).to(device)
@@ -106,7 +110,9 @@ for i in range(sz):
             dim_hidden=args.layer_size,
             dim_out=vols,
             num_layers=args.num_layers,
-            activation=mlp_activation[args.activation]
+            activation=mlp_activation[args.activation],
+            siren_start=args.single_siren_start,
+            siren_end=args.single_siren_end
         ).to(device)
     else:
         print(f'Unknown model: {args.model}')

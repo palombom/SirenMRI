@@ -87,14 +87,11 @@ class Siren(nn.Module):
 
         final_activation = nn.Identity() if final_activation is None else final_activation
         self.last_layer = SirenLayer(dim_in=dim_hidden, dim_out=dim_out, w0=w0,
-                                use_bias=use_bias, activation=final_activation)
+                                     use_bias=use_bias, activation=final_activation)
 
     def forward(self, x):
         x = self.net(x)
         return self.last_layer(x)
-        
-
-
 
 
 class MLP(nn.Module):
@@ -107,16 +104,39 @@ class MLP(nn.Module):
         num_layers (int): Number of layers.
         activation (torch.nn.Module): Activation function.
     """
-    def __init__(self, dim_in, dim_hidden, dim_out, num_layers, activation=nn.ReLU()):
+    def __init__(self, dim_in, dim_hidden, dim_out, num_layers, activation=nn.ReLU(), siren_start=False, siren_end=False):
         super(MLP, self).__init__()
 
         self.fc_layers = nn.ModuleList()
 
-        self.fc_layers.extend([nn.Linear(dim_in, dim_hidden), activation])
+        if not siren_start:
+            self.fc_layers.extend([nn.Linear(dim_in, dim_hidden), activation])
+        else:
+            self.fc_layers.extend([
+                SirenLayer(
+                    dim_in=dim_in,
+                    dim_out=dim_hidden,
+                    w0=30,
+                    use_bias=True,
+                    is_first=True
+                )])
 
-        for ind in range(num_layers):  # n_layers fully connected hidden layers with RELU transfer function
+        for ind in range(num_layers - 1):  # n_layers fully connected hidden layers with RELU transfer function
             self.fc_layers.extend([nn.Linear(dim_hidden, dim_hidden), activation])
-            self.encoder = nn.Sequential(*self.fc_layers, nn.Linear(dim_hidden, dim_out)) # Add the last linear layer for regression
+
+        if siren_end:
+            self.fc_layers.extend([
+                SirenLayer(
+                    dim_in=dim_hidden,
+                    dim_out=dim_hidden,
+                    w0=30,
+                    use_bias=True,
+                    is_first=False
+                )])
+        else:
+            self.fc_layers.extend([nn.Linear(dim_hidden, dim_hidden), activation])
+
+        self.encoder = nn.Sequential(*self.fc_layers, nn.Linear(dim_hidden, dim_out)) # Add the last linear layer for regression
 
     def forward(self, x):
         x = self.encoder(x)
