@@ -33,6 +33,7 @@ parser.add_argument("-nl", "--num_layers", help="Number of layers", type=int, de
 parser.add_argument("-w0", "--w0", help="w0 parameter for SIREN model.", type=float, default=30.0)
 parser.add_argument("-w0i", "--w0_initial", help="w0 parameter for first layer of SIREN model.", type=float, default=30.0)
 parser.add_argument("-m", "--model", help="Model to use. Implemented are siren or mlp.", default="siren")
+parser.add_argument("-b", "--batch_size", help="Size of mini-batches (-1 for one single batch per epoch).", type=int, default=-1)
 parser.add_argument("-fa", "--final_activation", help="Final activation function (SIREN model-only).", default="identity")
 parser.add_argument("-a", "--activation", help="Activation function to use with mlp (relu or tanh).", default="relu")
 parser.add_argument("-ssr", "--single_siren_start", help="Substitute first layer with SIREN (MLP model-only).", action='store_true')
@@ -136,7 +137,7 @@ for i in range(sz):
     coordinates, features = coordinates.to(device, dtype), features.to(device, dtype)
 
     # Train model in full precision
-    trainer.train(coordinates, features, num_iters=args.num_iters)
+    trainer.train(coordinates, features, num_iters=args.num_iters, batch_size=args.batch_size)
     print(f'Best training psnr: {trainer.best_vals["psnr"]:.2f}')
     print(f'Best training loss: {trainer.best_vals["loss"]:.2f}')
     if args.log_measures:
