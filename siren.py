@@ -69,13 +69,14 @@ class Siren(nn.Module):
     def __init__(self, dim_in, dim_hidden, dim_out, num_layers, w0=30.,
                  w0_initial=30., use_bias=True, final_activation=None):
         super().__init__()
-        layers = []
+        self.layers = nn.ModuleList([])
+        #self.layers = []
         for ind in range(num_layers):
             is_first = ind == 0
             layer_w0 = w0_initial if is_first else w0
             layer_dim_in = dim_in if is_first else dim_hidden
 
-            layers.append(SirenLayer(
+            self.layers.append(SirenLayer(
                 dim_in=layer_dim_in,
                 dim_out=dim_hidden,
                 w0=layer_w0,
@@ -83,14 +84,20 @@ class Siren(nn.Module):
                 is_first=is_first
             ))
 
-        self.net = nn.Sequential(*layers)
+        #self.net = nn.Sequential(*layers)
 
         final_activation = nn.Identity() if final_activation is None else final_activation
         self.last_layer = SirenLayer(dim_in=dim_hidden, dim_out=dim_out, w0=w0,
                                      use_bias=use_bias, activation=final_activation)
 
-    def forward(self, x):
-        x = self.net(x)
+    def forward(self, x, mods=None):
+        #x = self.net(x)
+        for layer, mod in zip(self.layers, mods):
+            #if mod is not None:
+                #x += mod
+            x = layer(x)
+            if mod is not None:
+                x *= mod
         return self.last_layer(x)
 
 
@@ -141,3 +148,51 @@ class MLP(nn.Module):
     def forward(self, x):
         x = self.encoder(x)
         return x
+
+
+class Modulator(nn.Module):
+    def __init__(self, dim_in, dim_hidden, num_layers):
+        super().__init__()
+        self.layers = nn.ModuleList([])
+
+        for ind in range(num_layers):
+            is_first = ind == 0
+            dim = dim_in if is_first else dim_hidden
+
+            self.layers.append(nn.Sequential(
+                nn.Linear(dim, dim_hidden),
+                nn.ReLU()
+            ))
+
+    def forward(self, z):
+        x = z
+        mods = []
+
+        for layer in self.layers:
+            x = layer(x)
+            mods.append(x)
+
+        return mods
+
+
+class ModulatedSiren(nn.Module):
+    def __init__(self,  dim_in, dim_hidden, dim_latent, dim_out, num_layers):
+        super().__init__()
+
+        self.net = Siren(
+            dim_in=dim_in,
+            dim_hidden=dim_hidden,
+            dim_out=dim_out,
+            num_layers=num_layers
+        )
+
+        self.modulator = Modulator(
+            dim_in=dim_latent,
+            dim_hidden=dim_hidden,
+            num_layers=num_layers
+        )
+
+    def forward(self, z, latent):
+        mods = self.modulator(latent)
+        out = self.net(z, mods)
+        return out

@@ -25,7 +25,7 @@ class Trainer():
         # Store parameters of best model (in terms of highest PSNR achieved)
         self.best_model = OrderedDict((k, v.detach().clone()) for k, v in self.representation.state_dict().items())
 
-    def train(self, coordinates, features, num_iters, batch_size=-1):
+    def train(self, coordinates, features, num_iters, batch_size=-1, latent=[]):
         """Fit neural net to image.
 
         Args:
@@ -48,8 +48,12 @@ class Trainer():
 
                     indices = permutation[i:i + batch_size]
                     batch_c, batch_f = coordinates[indices, :], features[indices, :]
+                    if len(latent):
+                        batch_l = latent[indices, :]
+                        predicted = self.representation(batch_c, batch_l)
+                    else:
+                        predicted = self.representation(batch_c)
 
-                    predicted = self.representation(batch_c)
                     loss = self.loss_func(predicted, batch_f)
                     loss.backward()
                     self.optimizer.step()
