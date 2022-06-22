@@ -33,6 +33,7 @@ parser.add_argument("-w0", "--w0", help="w0 parameter for SIREN model.", type=fl
 parser.add_argument("-w0i", "--w0_initial", help="w0 parameter for first layer of SIREN model.", type=float, default=30.0)
 parser.add_argument("-b", "--batch_size", help="Size of mini-batches (-1 for one single batch per epoch).", type=int, default=-1)
 parser.add_argument("-fa", "--final_activation", help="Final activation function.", default="identity")
+parser.add_argument("-op", "--operation", help="Operation to perform (train+decompress, train, decompress).", default="train+compress")
 
 args = parser.parse_args()
 mlp_activation = {'relu': torch.nn.ReLU(), 'tanh': torch.nn.Tanh()}
@@ -78,7 +79,7 @@ scipy.io.savemat(compression_folder + f'/input_to_best_model.mat', indata)
 
 # Prepare to save the decompressed image
 new_header = nii.header.copy()
-img_decompressed = img_tmp
+img_decompressed = np.zeros_like(img_tmp)
 
 print(f'Image size: {sx} x {sy} x {sz} x {vols}')
 
@@ -93,9 +94,6 @@ if torch.cuda.device_count() > 1:
     func_rep = torch.nn.DataParallel(func_rep)
 func_rep.to(device)
 
-# Set up training
-trainer = Trainer(func_rep, lr=args.learning_rate)
-
 img = np.transpose(img_tmp, (3, 0, 1, 2))
 img = torch.from_numpy(img.astype(np.float32))
 
@@ -108,33 +106,42 @@ features = torch.from_numpy(features.astype(np.float32))
 
 coordinates, latent, features = coordinates.to(device, dtype), latent.to(device, dtype), features.to(device, dtype)
 
-# Train model in full precision
-trainer.train(coordinates, features, num_iters=args.num_iters, batch_size=args.batch_size, latent=latent)
-print(f'Best training psnr: {trainer.best_vals["psnr"]:.2f}')
-print(f'Best training loss: {trainer.best_vals["loss"]:.2f}')
-if args.log_measures:
-    with open(args.logdir + '/log.pickle', 'wb') as handle:
-        pickle.dump(trainer.logs, handle)
 
-# Save best model
-torch.save(trainer.best_model, compression_folder + f'/best_model.pt')
+# Set up training
+if 'train' in args.operation:
+    trainer = Trainer(func_rep, lr=args.learning_rate)
+    # Train model in full precision
+    trainer.train(coordinates, features, num_iters=args.num_iters, batch_size=args.batch_size, latent=latent)
+    print(f'Best training psnr: {trainer.best_vals["psnr"]:.2f}')
+    print(f'Best training loss: {trainer.best_vals["loss"]:.2f}')
+    if args.log_measures:
+        with open(args.logdir + '/log.pickle', 'wb') as handle:
+            pickle.dump(trainer.logs, handle)
 
-# Update current model to be best model
-func_rep.load_state_dict(trainer.best_model)
+    # Save best model
+    torch.save(trainer.best_model, compression_folder + f'/best_model.pt')
 
-# Save full precision image reconstruction
-with torch.no_grad():
-    PredParams = func_rep(coordinates, latent)
-PredParams = scaler.inverse_transform(PredParams.cpu().numpy())
-img_decompressed = np.reshape(PredParams,
-                              (img_tmp.shape[0], img_tmp.shape[1], img_tmp.shape[2], img_tmp.shape[3]))
+    # Update current model to be best model
+    func_rep.load_state_dict(trainer.best_model)
+else:
+    func_rep.load_state_dict(torch.load(compression_folder + f'/best_model.pt'))
 
+if 'decompress' in args.operation:
+    # Save full precision image reconstruction
+    for z_scaled in torch.unique(latent):
+        indices = torch.squeeze(latent == z_scaled)
+        with torch.no_grad():
+            PredParams = func_rep(coordinates[indices, :], latent[indices])
+        PredParams = scaler.inverse_transform(PredParams.cpu().numpy())
+        z = int((((z_scaled / 2) + 0.5) * (sz - 1)).cpu().numpy())
+        img_decompressed[:, :, z, :] = np.reshape(PredParams,
+                                             (img_tmp.shape[0], img_tmp.shape[1], img_tmp.shape[3]))
 
-# Save the prediction in NIFTI
-print("Saving the decompressed NIFTI")
-new_img = nib.nifti1.Nifti1Image(img_decompressed, None, header=new_header)
-nib.save(new_img, args.logdir + f'/dwi_decompressed.nii.gz')
+    # Save the prediction in NIFTI
+    print("Saving the decompressed NIFTI")
+    new_img = nib.nifti1.Nifti1Image(img_decompressed, None, header=new_header)
+    nib.save(new_img, args.logdir + f'/dwi_decompressed.nii.gz')
 
-# Compress the output
-with py7zr.SevenZipFile(compression_folder + '.7z', 'w') as archive:
-    archive.writeall(compression_folder)
+    # Compress the output
+    with py7zr.SevenZipFile(compression_folder + '.7z', 'w') as archive:
+        archive.writeall(compression_folder)
