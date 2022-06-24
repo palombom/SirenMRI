@@ -56,7 +56,7 @@ def to_coordinates_and_features_2D(img):
     # same shape as spatial dimensions of image
 
     # Get coordinates
-    d1, d2, d3 = np.mgrid[0:img.shape[1], 0:img.shape[2], 0:img.shape[3]]
+    d1, d2 = np.mgrid[0:img.shape[1], 0:img.shape[2]]
 
     d1 = np.reshape(d1, (img.shape[1] * img.shape[2], 1))
     d2 = np.reshape(d2, (img.shape[1] * img.shape[2], 1))
