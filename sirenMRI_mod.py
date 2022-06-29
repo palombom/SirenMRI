@@ -33,7 +33,7 @@ parser.add_argument("-w0", "--w0", help="w0 parameter for SIREN model.", type=fl
 parser.add_argument("-w0i", "--w0_initial", help="w0 parameter for first layer of SIREN model.", type=float, default=30.0)
 parser.add_argument("-b", "--batch_size", help="Size of mini-batches (-1 for one single batch per epoch).", type=int, default=-1)
 parser.add_argument("-fa", "--final_activation", help="Final activation function.", default="identity")
-parser.add_argument("-op", "--operation", help="Operation to perform (train+decompress, train, decompress).", default="train+compress")
+parser.add_argument("-op", "--operation", help="Operation to perform (train+decompress, train, decompress).", default="train+decompress")
 
 args = parser.parse_args()
 mlp_activation = {'relu': torch.nn.ReLU(), 'tanh': torch.nn.Tanh()}
