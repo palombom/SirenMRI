@@ -1,9 +1,6 @@
-import scipy.io
 import scipy
 import argparse
 import getpass
-import imageio
-import json
 import os
 import random
 import sys
@@ -13,8 +10,6 @@ import numpy as np
 import nibabel as nib
 from siren import Siren
 from siren import MLP
-from torchvision import transforms
-from torchvision.utils import save_image
 from training import Trainer
 from sklearn.preprocessing import MinMaxScaler
 import pickle

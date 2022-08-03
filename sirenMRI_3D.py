@@ -1,9 +1,6 @@
-import scipy.io
 import scipy
 import argparse
 import getpass
-import imageio
-import json
 import os
 import random
 import torch
@@ -11,8 +8,6 @@ import util
 import numpy as np
 import nibabel as nib
 from siren import Siren
-from torchvision import transforms
-from torchvision.utils import save_image
 from training import Trainer
 from sklearn.preprocessing import MinMaxScaler
 import pickle
@@ -74,6 +69,7 @@ func_rep = Siren(
     w0_initial=args.w0_initial,
     w0=args.w0
 )
+# If more than one GPU is available, use them all
 if torch.cuda.device_count() > 1:
     func_rep = torch.nn.DataParallel(func_rep)
 func_rep.to(device)

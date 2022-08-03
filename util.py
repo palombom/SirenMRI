@@ -79,9 +79,9 @@ def to_coordinates_and_features_3D(img):
         Args:
         img (torch.Tensor): Shape (channels, X, Y, Z).
         """
-    # Coordinates are indices of all non zero locations of a tensor of ones of
-    # same shape as spatial dimensions of image
+
     print("Get coordinates")
+
     d1, d2, d3 = np.mgrid[0:img.shape[1], 0:img.shape[2], 0:img.shape[3]]
     d1 = np.reshape(d1, (img.shape[1] * img.shape[2] * img.shape[3], 1))
     d2 = np.reshape(d2, (img.shape[1] * img.shape[2] * img.shape[3], 1))
@@ -90,19 +90,11 @@ def to_coordinates_and_features_3D(img):
     d2 = 2 * (torch.from_numpy(d2.astype(np.float32)) / (img.shape[2] - 1) - 0.5)
     d3 = 2 * (torch.from_numpy(d3.astype(np.float32)) / (img.shape[3] - 1) - 0.5)
 
-    # coordinates = torch.ones(img.shape[1:]).nonzero(as_tuple=False).float()
     coordinates = torch.ones(img.shape[1] * img.shape[2] * img.shape[3], 3)
     coordinates[:, 0] = d1[:, 0]
     coordinates[:, 1] = d2[:, 0]
     coordinates[:, 2] = d3[:, 0]
-    # Normalize coordinates to lie in [-.5, .5]
-    # print("Normalize coordinates")
-    # coordinates[:,0] = coordinates[:,0] / (img.shape[1] - 1) - 0.5
-    # coordinates[:,1] = coordinates[:,1] / (img.shape[2] - 1) - 0.5
-    # coordinates[:,2] = coordinates[:,2] / (img.shape[3] - 1) - 0.5
-    # Convert to range [-1, 1]
-    # coordinates *= 2
-    # Convert image to a tensor of features of shape (num_points, channels)
+
     print("Get features")
     features = img.reshape(img.shape[0], -1).T
     return coordinates, features

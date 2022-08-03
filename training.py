@@ -16,7 +16,6 @@ class Trainer():
         """
         self.representation = representation
         self.optimizer = torch.optim.Adam(self.representation.parameters(), lr=lr)
-        #self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min')
         self.print_freq = print_freq
         self.steps = 0  # Number of steps taken in training
         self.loss_func = torch.nn.MSELoss()
@@ -60,7 +59,6 @@ class Trainer():
                     if loss.item() < self.best_vals['loss']:
                         self.best_vals['psnr'] = psnr
                         self.best_vals['loss'] = loss.item()
-                        #self.scheduler.step(loss.item())
                         # If model achieves best PSNR and loss seen during training, update
                         # model
                         for k, v in self.representation.state_dict().items():
