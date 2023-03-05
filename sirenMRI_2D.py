@@ -12,7 +12,7 @@ from siren import MLP
 from training import Trainer
 from sklearn.preprocessing import MinMaxScaler
 import pickle
-import py7zr
+#import py7zr
 
 
 parser = argparse.ArgumentParser()
